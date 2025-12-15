@@ -28,18 +28,25 @@ pipeline {
             steps {
                 script {
                     def containerName = "nginx_build_${BUILD_NUMBER}"
-                    def hostPort = 9000 + BUILD_NUMBER.toInteger()
 
                     sh """
+                    docker rm -f ${containerName} 2>/dev/null || true
                     docker run -d \
                       --name ${containerName} \
                       --network ${NETWORK_NAME} \
-                      -p ${hostPort}:80 \
                       ${IMAGE_NAME}:${BUILD_NUMBER}
                     """
                     echo "Conteneur deployé : ${containerName}"
-                    echo "Accès : http://localhost:${hostPort}"
                 }
+            }
+        }
+
+        stage('Test Nginx inside Docker network') {
+            steps {
+                sh """
+                docker run --rm --network ${NETWORK_NAME} curlimages/curl:8.10.1 \
+                  -sS http://nginx_build_${BUILD_NUMBER}:80 | head -n 5
+                """
             }
         }
     }
